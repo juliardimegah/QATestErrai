@@ -5,22 +5,34 @@ from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
 
 # API setup
 YOUTUBE_API_KEY = 'AIzaSyBk_nfYD7jlBqNk-jTX_AXQz2KE8nDwRSw'  # Add your API key here
 youtube = build('youtube', 'v3', developerKey=YOUTUBE_API_KEY)
 
-# Function to search YouTube videos by topic
-def search_youtube_videos(topic, max_results=50):
-    request = youtube.search().list(
-        q=topic,
-        part='snippet',
-        type='video',
-        maxResults=max_results,
-        order='date'  # Sort by upload date
-    )
-    response = request.execute()
-    return response['items']
+# Function to search YouTube videos by topic, fetching all pages to reach the last page
+def search_youtube_videos(topic):
+    videos = []
+    next_page_token = None
+
+    while True:
+        request = youtube.search().list(
+            q=topic,
+            part='snippet',
+            type='video',
+            order='date',
+            maxResults=50,
+            pageToken=next_page_token
+        )
+        response = request.execute()
+        videos += response['items']
+        next_page_token = response.get('nextPageToken')
+        if not next_page_token:
+            # No more pages, we've reached the end
+            break
+
+    return videos
 
 # Function to retrieve the 5 oldest videos and their video IDs
 def get_oldest_videos(videos):
@@ -38,11 +50,13 @@ def get_comment_count(video_url):
 
     try:
         # Scroll down to load comments
-        driver.execute_script("window.scrollTo(0, document.documentElement.scrollHeight);")
-        time.sleep(2)
+        body = driver.find_element(By.TAG_NAME, 'body')
+        for _ in range(3):  # Scroll multiple times to ensure comments load
+            body.send_keys(Keys.PAGE_DOWN)
+            time.sleep(2)
 
-        # Extract comment count (XPath might vary)
-        comment_count_element = driver.find_element(By.XPATH, "//yt-formatted-string[@id='count' and @class='count-text style-scope ytd-comments-header-renderer']")
+        # Extract comment count using the provided XPath
+        comment_count_element = driver.find_element(By.XPATH, '//*[@id="count"]/yt-formatted-string/span[1]')
         comment_count = comment_count_element.text
     except Exception as e:
         print(f"Failed to get comments for {video_url}: {e}")
@@ -65,7 +79,7 @@ if __name__ == "__main__":
         # Get the 5 oldest videos
         oldest_videos = get_oldest_videos(videos)
 
-        # Loop through each video and get comment count
+        # Loop through each of the 5 oldest videos and get comment count
         for video in oldest_videos:
             video_id = video['id']['videoId']
             video_url = f"https://www.youtube.com/watch?v={video_id}"

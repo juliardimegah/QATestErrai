@@ -8,7 +8,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 
 # API setup
-YOUTUBE_API_KEY = 'AIzaSyBk_nfYD7jlBqNk-jTX_AXQz2KE8nDwRSw'  # Add your API key here
+YOUTUBE_API_KEY = 'AIzaSyBuQZ_5B62SyzT1JaCzjj2eBcqtoe_MvFc'  # Add your API key here
 youtube = build('youtube', 'v3', developerKey=YOUTUBE_API_KEY)
 
 # Function to search YouTube videos by topic, fetching all pages to reach the last page
